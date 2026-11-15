@@ -23,7 +23,7 @@
   function renderSetup() {
     const labels=game==='round1'?['Coins']:['Pile A','Pile B'];
     refs.setup.innerHTML='<form class="setup-form"><span class="setup-heading">Position</span>'+labels.map((label,i)=>'<label class="setup-label">'+label+'<input class="setup-input" type="number" min="0" max="30" step="1" required value="'+start[i]+'" aria-label="'+label+' starting position"></label>').join('')+'<button class="setup-apply" type="submit">Set</button></form>';
-    refs.opponent.innerHTML='<label class="opponent-field">Opponent <select aria-label="Opponent difficulty"><option value="flawed"'+(difficulty==='flawed'?' selected':'')+'>Flawed</option><option value="perfect"'+(difficulty==='perfect'?' selected':'')+'>Perfect</option></select></label>';
+    refs.opponent.innerHTML='<div class="opponent-field"><span class="opponent-label" id="opponent-label">Opponent</span><button type="button" class="opponent-trigger" aria-labelledby="opponent-label opponent-current" aria-haspopup="menu" aria-expanded="false" aria-controls="opponent-menu"><span class="opponent-current" id="opponent-current">'+(difficulty==='flawed'?'Flawed':'Perfect')+'</span><span class="opponent-chevron" aria-hidden="true">⌄</span></button><div id="opponent-menu" class="opponent-menu" role="menu" aria-label="Opponent difficulty" hidden><button type="button" class="opponent-option" role="menuitemradio" aria-checked="'+(difficulty==='flawed')+'" data-difficulty="flawed"><span>Flawed</span></button><button type="button" class="opponent-option" role="menuitemradio" aria-checked="'+(difficulty==='perfect')+'" data-difficulty="perfect"><span>Perfect</span></button></div></div>';
   }
   function pile(n, index) {
     const label=game==='round1'?'COINS':index===0?'PILE A':'PILE B';
@@ -84,7 +84,32 @@
   refs.board.addEventListener('pointerover',e=>highlight(e,true));refs.board.addEventListener('pointerout',e=>highlight(e,false));refs.board.addEventListener('focusin',e=>highlight(e,true));refs.board.addEventListener('focusout',e=>highlight(e,false));
   refs.controls.addEventListener('click',e=>{const b=e.target.closest('[data-take-mode]');if(b){const keyboard=e.detail===0;takeMode=b.dataset.takeMode;render();if(keyboard)refs.controls.querySelector('[data-take-mode="'+takeMode+'"]').focus();}});
   refs.setup.addEventListener('submit',event=>{event.preventDefault();const inputs=[...refs.setup.querySelectorAll('input')];if(inputs.some(input=>!input.validity.valid)){inputs.find(input=>!input.validity.valid).reportValidity();return;}const values=inputs.map(input=>Number(input.value));if(isEmpty(values)){message='Choose a position with at least one coin.';refs.status.textContent=message;return;}reset(game,values);});
-  refs.opponent.addEventListener('change',event=>{if(event.target.matches('select'))difficulty=event.target.value;});
+  function closeOpponentMenu(restoreFocus) {
+    const trigger=refs.opponent.querySelector('.opponent-trigger'), menu=refs.opponent.querySelector('.opponent-menu');
+    if(!trigger || !menu || menu.hidden)return;
+    menu.hidden=true;trigger.setAttribute('aria-expanded','false');
+    if(restoreFocus)trigger.focus();
+  }
+  function openOpponentMenu() {
+    const trigger=refs.opponent.querySelector('.opponent-trigger'), menu=refs.opponent.querySelector('.opponent-menu');
+    menu.hidden=false;trigger.setAttribute('aria-expanded','true');
+    menu.querySelector('[aria-checked="true"]').focus();
+  }
+  refs.opponent.addEventListener('click',event=>{
+    const trigger=event.target.closest('.opponent-trigger'), choice=event.target.closest('[data-difficulty]');
+    if(trigger){const menu=refs.opponent.querySelector('.opponent-menu');if(menu.hidden)openOpponentMenu();else closeOpponentMenu(true);return;}
+    if(choice){difficulty=choice.dataset.difficulty;refs.opponent.querySelector('.opponent-current').textContent=difficulty==='flawed'?'Flawed':'Perfect';refs.opponent.querySelectorAll('[data-difficulty]').forEach(item=>item.setAttribute('aria-checked',String(item.dataset.difficulty===difficulty)));closeOpponentMenu(true);}
+  });
+  refs.opponent.addEventListener('keydown',event=>{
+    const menu=refs.opponent.querySelector('.opponent-menu'), trigger=refs.opponent.querySelector('.opponent-trigger');
+    if(event.key==='Escape'&&!menu.hidden){event.preventDefault();closeOpponentMenu(true);return;}
+    if(event.key==='Tab'&&!menu.hidden){closeOpponentMenu(true);return;}
+    if((event.key==='ArrowDown'||event.key==='ArrowUp')&&document.activeElement===trigger){event.preventDefault();openOpponentMenu();return;}
+    if(!menu.hidden && ['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+      event.preventDefault();const choices=[...menu.querySelectorAll('[data-difficulty]')];const current=choices.indexOf(document.activeElement);let next=event.key==='Home'?0:event.key==='End'?choices.length-1:event.key==='ArrowDown'?(current+1)%choices.length:(current-1+choices.length)%choices.length;choices[next].focus();
+    }
+  });
+  document.addEventListener('click',event=>{if(!refs.opponent.contains(event.target))closeOpponentMenu(false);});
   $('reset-btn').addEventListener('click',()=>reset());
   $('hint-btn').addEventListener('click',()=>{refs.hint.hidden=!refs.hint.hidden;$('hint-btn').setAttribute('aria-expanded',String(!refs.hint.hidden));if(!refs.hint.hidden)updateHint();});
   $('answer-btn').addEventListener('click',()=>{refs.answer.hidden=!refs.answer.hidden;$('answer-btn').setAttribute('aria-expanded',String(!refs.answer.hidden));renderGraph();});

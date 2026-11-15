@@ -6,6 +6,11 @@
   const plural = n => n === 1 ? 'coin' : 'coins';
   const tuple = p => p.length === 1 ? String(p[0]) : '(' + p.join(', ') + ')';
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function setRangeFill(input) {
+    const min=Number(input.min), max=Number(input.max);
+    const progress=max>min?(Number(input.value)-min)*100/(max-min):0;
+    input.style.setProperty('--range-progress', Math.max(0,Math.min(100,progress))+'%');
+  }
   function targets(game, position) {
     return root.NimEngine.moves(game, position).filter(p => root.NimEngine.isLosing(game,p));
   }
@@ -59,9 +64,19 @@
     const options=targets(game,pos), terminal=pos.every(n=>n===0), losing=root.NimEngine.isLosing(game,pos);
     const summary=terminal ? '<strong>No coins left.</strong> The previous player wins.' : losing ? '<strong>No winning move.</strong> This is a losing position against perfect play.' : '<strong>'+esc(root.NimEngine.describeMove(game,pos,options[0]))+'</strong> Leave '+esc(tuple(options[0]))+'.';
     container.innerHTML='<div class="nim-graph-header"><div><span class="nim-graph-kicker">STRATEGY MAP</span><h3>Find your move</h3></div><span class="nim-graph-current">NOW '+esc(tuple(pos))+'</span></div><div class="nim-graph-result" role="status">'+summary+'</div><div class="nim-graph-legend"><span><i class="ng-key losing"></i>Losing</span><span><i class="ng-key current"></i>Current</span><span><i class="ng-key target"></i>Winning move</span></div><div class="nim-graph-viewport"><div class="nim-graph-figure" style="width:'+s.scale+'%">'+plot(game,pos,s.limit,s.id)+'</div></div><div class="nim-graph-controls"><label>Graph size <output class="ng-size-output">'+s.scale+'%</output><input class="ng-size" type="range" min="80" max="180" step="10" value="'+s.scale+'" aria-label="Graph size"></label><label>Show through <output>'+s.limit+'</output><input class="ng-limit" type="range" min="'+floor+'" max="'+upper+'" step="1" value="'+s.limit+'" aria-label="Largest position shown"></label></div><p class="nim-graph-note">Losing means the player to move cannot force a win. Green rings mark moves to leave a losing position.</p>';
-    container.querySelector('.ng-size').addEventListener('input',e=>{s.scale=Number(e.target.value);container.querySelector('.nim-graph-figure').style.width=s.scale+'%';container.querySelector('.ng-size-output').textContent=s.scale+'%';});
-    container.querySelector('.ng-limit').addEventListener('input',e=>{e.target.previousElementSibling.textContent=e.target.value;});
-    container.querySelector('.ng-limit').addEventListener('change',e=>{const focused=document.activeElement===e.target;s.limit=Number(e.target.value);render(container,s.game,s.pos);if(focused)container.querySelector('.ng-limit').focus();});
+    const sizeInput=container.querySelector('.ng-size'), limitInput=container.querySelector('.ng-limit');
+    setRangeFill(sizeInput); setRangeFill(limitInput);
+    sizeInput.addEventListener('input',e=>{s.scale=Number(e.target.value);setRangeFill(e.target);container.querySelector('.nim-graph-figure').style.width=s.scale+'%';container.querySelector('.ng-size-output').textContent=s.scale+'%';});
+    let pendingFrame=0;
+    limitInput.addEventListener('input',e=>{
+      s.limit=Number(e.target.value);setRangeFill(e.target);e.target.previousElementSibling.textContent=e.target.value;
+      if(pendingFrame) root.cancelAnimationFrame(pendingFrame);
+      pendingFrame=root.requestAnimationFrame(()=>{
+        const figure=container.querySelector('.nim-graph-figure');
+        if(figure) figure.innerHTML=plot(s.game,s.pos,s.limit,s.id);
+        pendingFrame=0;
+      });
+    });
   }
   root.NimGraph=Object.freeze({render});
 })(typeof globalThis!=='undefined'?globalThis:window);
