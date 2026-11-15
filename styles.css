@@ -266,3 +266,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 @keyframes menu-unfold{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes panel-arrive{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.opponent-menu:not([hidden]),.reveal-text:not([hidden]),.graph-panel:not([hidden]),.history-card[open] .move-history{animation:none}.opponent-trigger,.opponent-chevron,.opponent-option,.help-button>span:last-child,.history-card,.history-card summary span{transition:none!important}}
+
+/* Shift shortcut: the same mint, plum and soft motion used by the game controls. */
+.shift-tip{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0 2px;color:#776779;font-size:11px;line-height:1.5;transition:color .18s ease}
+.shift-key{display:inline-flex;align-items:center;justify-content:center;min-width:39px;padding:2px 7px;border:1px solid #d9cddd;border-bottom-width:2px;border-radius:6px;background:#fffefa;color:#5d4166;font:700 10px/1.5 var(--body);box-shadow:0 2px 5px #49324f0c;transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.shift-tip.shift-active,.shift-active .shift-tip{color:#326345}
+.shift-tip.shift-active .shift-key,.shift-active .shift-tip .shift-key{border-color:#9bc9a8;background:#e0f1e3;color:#315e3c;transform:translateY(1px)}
+.take-mode button{transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.take-mode button:active:not(:disabled){transform:scale(.97)}
+@media(max-width:520px){.shift-tip{font-size:11px;gap:5px}}
+@media(prefers-reduced-motion:reduce){.shift-tip,.shift-key,.take-mode button{transition:none!important}}
+
+/* Preview the temporary Shift gesture without changing the saved move mode. */
+.coin-row .coin.shift-invalid,button.coin.shift-invalid{filter:grayscale(.35) brightness(.62);cursor:not-allowed;box-shadow:0 3px 0 #98764a}
+.coin-row .coin.shift-invalid:hover:not(:disabled),button.coin.shift-invalid:hover:not(:disabled){transform:none;filter:grayscale(.35) brightness(.62);box-shadow:0 3px 0 #98764a}
+.take-mode button[data-take-mode=both].shift-override{border-color:#80b794;background:#ecf7ee;color:#315e3c;box-shadow:0 0 0 3px #a6d4b34d}
