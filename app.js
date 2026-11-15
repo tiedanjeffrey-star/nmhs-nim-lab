@@ -59,27 +59,30 @@
     const target=E.bestMove(game,position);
     refs.hint.textContent=E.describeMove(game,position,target)+' Leave '+positionLabel(target)+'.';
   }
-  function take(pileIndex, n) {
+  function take(pileIndex, n, keyboard) {
     if(busy||ended)return;
     const next=position.slice();
     if(game==='round3'&&takeMode==='both'){next[0]-=n;next[1]-=n;}else next[pileIndex]-=n;
     if(!E.moves(game,position).some(p=>p.every((v,i)=>v===next[i])))return;
     const prev=position.slice();position=next;history.push({who:'You',text:E.describeMove(game,prev,next),pos:next.slice()});hideHint();
-    if(isEmpty(next)){ended=true;message='You win!';render();return;}
+    if(isEmpty(next)){ended=true;message='You win!';render();if(keyboard)$('reset-btn').focus();return;}
     busy=true;message='Opponent is thinking…';render();
+    if(keyboard){refs.status.tabIndex=-1;refs.status.focus();}
     timer=setTimeout(()=>{
       const previous=position.slice();position=E.chooseMove(game,position,difficulty);const desc=E.describeMove(game,previous,position);
       history.push({who:'Opponent',text:desc,pos:position.slice()});busy=false;
       if(isEmpty(position)){ended=true;message='Opponent wins.';}else message='Opponent: '+desc+' Your turn.';
       if(takeMode==='both' && game==='round3' && Math.min(...position)===0)takeMode='one';
+      const restoreFocus=keyboard && document.activeElement===refs.status;
       render();
+      if(restoreFocus){const coins=refs.board.querySelectorAll('button.coin:not(:disabled)');(coins[coins.length-1]||$('reset-btn')).focus();}
     },500);
   }
   document.querySelectorAll('[data-game]').forEach(tab=>tab.addEventListener('click',()=>{if(tab.dataset.game!==game)reset(tab.dataset.game);}));
-  refs.board.addEventListener('click',event=>{const button=event.target.closest('button[data-take]');if(button)take(Number(button.dataset.pile),Number(button.dataset.take));});
+  refs.board.addEventListener('click',event=>{const button=event.target.closest('button[data-take]');if(button)take(Number(button.dataset.pile),Number(button.dataset.take),event.detail===0);});
   function highlight(event,on){const button=event.target.closest('button[data-take]');if(!button||button.disabled)return;const k=Number(button.dataset.take),pileIndex=button.dataset.pile;refs.board.querySelectorAll('button.coin').forEach(c=>{const same=takeMode==='both'&&game==='round3'||c.dataset.pile===pileIndex;c.classList.toggle('selected',on&&same&&Number(c.dataset.take)<=k);});}
   refs.board.addEventListener('pointerover',e=>highlight(e,true));refs.board.addEventListener('pointerout',e=>highlight(e,false));refs.board.addEventListener('focusin',e=>highlight(e,true));refs.board.addEventListener('focusout',e=>highlight(e,false));
-  refs.controls.addEventListener('click',e=>{const b=e.target.closest('[data-take-mode]');if(b){takeMode=b.dataset.takeMode;render();}});
+  refs.controls.addEventListener('click',e=>{const b=e.target.closest('[data-take-mode]');if(b){const keyboard=e.detail===0;takeMode=b.dataset.takeMode;render();if(keyboard)refs.controls.querySelector('[data-take-mode="'+takeMode+'"]').focus();}});
   refs.setup.addEventListener('submit',event=>{event.preventDefault();const inputs=[...refs.setup.querySelectorAll('input')];if(inputs.some(input=>!input.validity.valid)){inputs.find(input=>!input.validity.valid).reportValidity();return;}const values=inputs.map(input=>Number(input.value));if(isEmpty(values)){message='Choose a position with at least one coin.';refs.status.textContent=message;return;}reset(game,values);});
   refs.opponent.addEventListener('change',event=>{if(event.target.matches('select'))difficulty=event.target.value;});
   $('reset-btn').addEventListener('click',()=>reset());
