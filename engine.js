@@ -36,6 +36,20 @@
     return options.find(next => isLosing(game, next)) || options[0] || null;
   }
 
+  // Flawed play sometimes misses a winning move, making mistakes visible to practice against.
+  function chooseMove(game, position, difficulty, random) {
+    const options = moves(game, position);
+    if (!options.length) return null;
+    const losingTargets = options.filter(next => isLosing(game, next));
+    const mistakes = options.filter(next => !isLosing(game, next));
+    const rng = typeof random === 'function' ? random : Math.random;
+    if (difficulty === 'flawed' && losingTargets.length && mistakes.length && rng() < 0.45) {
+      return mistakes[Math.floor(rng() * mistakes.length)];
+    }
+    if (losingTargets.length) return losingTargets[0];
+    return options[Math.floor(rng() * options.length)];
+  }
+
   function describeMove(game, from, to) {
     if (!validPosition(game, from) || !validPosition(game, to) ||
         !moves(game, from).some(next => next.every((n, i) => n === to[i]))) return 'Invalid move';
@@ -50,5 +64,5 @@
     return 'Take ' + n + ' ' + (n === 1 ? 'coin' : 'coins') + ' from pile ' + (a ? 'A' : 'B') + '.';
   }
 
-  root.NimEngine = Object.freeze({moves, isLosing, bestMove, describeMove});
+  root.NimEngine = Object.freeze({moves, isLosing, bestMove, chooseMove, describeMove});
 })(typeof globalThis !== 'undefined' ? globalThis : window);
